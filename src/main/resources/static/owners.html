@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Owners Management</title>
+</head>
+<body>
+
+<h1>Manage Owners (CatOwnerDto)</h1>
+<a href="index.html">← Back to Main Page</a>
+<hr/>
+
+<!-- 1) Загрузить всех владельцев -->
+<h2>All Owners</h2>
+<button id="btnLoadAllOwners">Load All Owners</button>
+<div id="ownerList"></div>
+
+<!-- 2) Создать владельца -->
+<h2>Create New Owner</h2>
+<form id="ownerCreateForm">
+    Name: <input type="text" id="ownerName" required><br/>
+    Birth Date (yyyy-MM-dd): <input type="text" id="ownerBirthDate" required><br/>
+    <button type="submit">Create Owner</button>
+</form>
+
+<!-- 3) Удалить владельца по ID -->
+<h2>Delete Owner by ID</h2>
+<form id="ownerDeleteForm">
+    <input type="number" id="ownerIdToDelete" required>
+    <button type="submit">Delete</button>
+</form>
+
+<!-- 4) Получить владельца по ID -->
+<h2>Get Owner by ID</h2>
+<form id="ownerGetForm">
+    <input type="number" id="ownerIdGet" required>
+    <button type="submit">Get Owner</button>
+</form>
+<div id="singleOwner"></div>
+
+<!-- 5) Добавить кота к владельцу (ownerId, catId) -->
+<h2>Add Cat to Owner</h2>
+<form id="addCatForm">
+    Owner ID: <input type="number" id="ownerIdCat" required><br/>
+    Cat ID: <input type="number" id="catId" required><br/>
+    <button type="submit">Add Cat</button>
+</form>
+
+<!-- 6) Удалить всех владельцев -->
+<h2>Delete All Owners</h2>
+<button id="btnDeleteAllOwners">Delete All</button>
+
+<!-- 7) Добавить кота к владельцу -->
+<h2>Add Cat to Owner</h2>
+<form id="addCatToOwnerForm">
+    Owner ID: <input type="number" id="addOwnerId" required><br/>
+    Cat ID: <input type="number" id="addCatId" required><br/>
+    <button type="submit">Add Cat to Owner</button>
+</form>
+<!-- FILTER + PAGINATION FORM -->
+<h2>Filter & Paginate Owners</h2>
+<form id="ownerFilterForm">
+    Name Contains: <input type="text" id="ownerNameFilter" /><br/>
+    Birth Date (yyyy-MM-dd): <input type="text" id="ownerBirthDateFilter" /><br/>
+
+    Offset: <input type="number" id="ownerOffset" value="0" />
+    Limit: <input type="number" id="ownerLimit" value="20" />
+    <br/>
+    <button type="submit">Load Owners</button>
+</form>
+
+<div id="filteredOwners"></div>
+
+<script>
+    // === 1) LOAD ALL OWNERS ===
+    document.getElementById("btnLoadAllOwners").addEventListener("click", () => {
+        fetch("/owners")  // GET /owners
+            .then(res => res.json())
+            .then(owners => {
+                const div = document.getElementById("ownerList");
+                div.innerHTML = "";
+                const ul = document.createElement("ul");
+                owners.forEach(o => {
+                    const li = document.createElement("li");
+                    li.innerText = `Owner ID=${o.id}, name=${o.name}, birthDate=${o.birthDate}`;
+                    ul.appendChild(li);
+                });
+                div.appendChild(ul);
+            })
+            .catch(err => console.error("Error loading owners:", err));
+    });
+
+    // === 2) CREATE OWNER ===
+    document.getElementById("ownerCreateForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const nameVal = document.getElementById("ownerName").value;
+        const bdVal = document.getElementById("ownerBirthDate").value; // "yyyy-MM-dd"
+
+        // JSON для CatOwnerDto: { name, birthDate }
+        const ownerDto = {
+            name: nameVal,
+            birthDate: bdVal
+        };
+
+        fetch("/owners", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify(ownerDto)
+        })
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to create owner");
+                return res.json();
+            })
+            .then(created => {
+                alert("Owner created! ID=" + created.id);
+            })
+            .catch(err => console.error("Error creating owner:", err));
+    });
+
+    // === 3) DELETE OWNER BY ID ===
+    document.getElementById("ownerDeleteForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const ownerId = document.getElementById("ownerIdToDelete").value;
+        fetch("/owners/" + ownerId, {method: "DELETE"})
+            .then(res => {
+                if (!res.ok) throw new Error("Delete failed or not found?");
+                alert(`Owner ID=${ownerId} deleted`);
+            })
+            .catch(err => console.error("Error deleting owner", err));
+    });
+
+    // === 4) GET OWNER BY ID ===
+    document.getElementById("ownerGetForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const ownerId = document.getElementById("ownerIdGet").value;
+
+        fetch("/owners/" + ownerId)
+            .then(res => {
+                if (!res.ok) throw new Error("Owner not found or error");
+                return res.json();
+            })
+            .then(owner => {
+                const singleOwnerDiv = document.getElementById("singleOwner");
+                singleOwnerDiv.innerHTML = `Owner ID=${owner.id}, Name=${owner.name}, birthDate=${owner.birthDate}`;
+            })
+            .catch(err => console.error("Error fetching owner", err));
+    });
+
+    // === 5) ADD CAT to OWNER (ownerId, catId) ===
+    document.getElementById("addCatForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const ownerId = document.getElementById("ownerIdCat").value;
+        const catId = document.getElementById("catId").value;
+
+        fetch(`/owners/${ownerId}/cats/${catId}`, {method: "POST"})
+            .then(res => {
+                if (!res.ok) throw new Error("Add cat to owner failed");
+                alert(`Cat ID=${catId} added to Owner ID=${ownerId}`);
+            })
+            .catch(err => console.error("Error adding cat to owner", err));
+    });
+    // === 6) DELETE ALL OWNERS ===
+    document.getElementById("btnDeleteAllOwners").addEventListener("click", () => {
+        if (confirm("Are you sure you want to delete ALL owners?")) {
+            fetch("/owners", {method: "DELETE"})
+                .then(res => {
+                    if (!res.ok) throw new Error("Delete all owners failed");
+                    alert("All owners deleted");
+                })
+                .catch(err => console.error("Error deleting all owners:", err));
+        }
+    });
+
+    // === 7) ADD CAT TO OWNER ===
+    document.getElementById("addCatToOwnerForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const ownerId = document.getElementById("addOwnerId").value;
+        const catId = document.getElementById("addCatId").value;
+
+        fetch(`/owners/${ownerId}/cats/${catId}`, {method: "POST"})
+            .then(res => {
+                if (!res.ok) throw new Error("Failed to add cat to owner");
+                alert(`Cat ID=${catId} added to Owner ID=${ownerId}`);
+            })
+            .catch(err => console.error("Error adding cat to owner:", err));
+    });
+</script>
+<script>
+    document.getElementById("ownerFilterForm").addEventListener("submit", e => {
+        e.preventDefault();
+
+        // Собираем параметры
+        const nameContains = document.getElementById("ownerNameFilter").value;
+        const birthDate = document.getElementById("ownerBirthDateFilter").value;
+        const offset = document.getElementById("ownerOffset").value;
+        const limit = document.getElementById("ownerLimit").value;
+
+        // query-string
+        let qs = `offset=${offset}&limit=${limit}`;
+        if (nameContains) {
+            qs += `&nameContains=${encodeURIComponent(nameContains)}`;
+        }
+        if (birthDate) {
+            qs += `&birthDate=${encodeURIComponent(birthDate)}`;
+        }
+
+        // GET /owners?offset=...&limit=...&nameContains=...&birthDate=...
+        fetch(`/owners?${qs}`)
+            .then(res => res.json())
+            .then(owners => {
+                const div = document.getElementById("filteredOwners");
+                div.innerHTML = "<h4>Filtered Owners:</h4>";
+                owners.forEach(o => {
+                    div.innerHTML += `ID=${o.id}, name=${o.name}, birthDate=${o.birthDate}<br/>`;
+                });
+            })
+            .catch(err => console.error("Error filtering owners:", err));
+    });
+</script>
+
+</body>
+</html>
