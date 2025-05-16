@@ -1,260 +1,121 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
-    <meta charset="UTF-8" />
-    <title>Cats Management</title>
+    <meta charset="UTF-8">
+    <title>Cats API demo</title>
+    <style>
+        body{font-family:Arial,Helvetica,sans-serif;margin:2rem;}
+        fieldset{margin-bottom:1.5rem;padding:1rem;}
+        input,textarea,button{margin:0.25rem 0;}
+        pre{background:#f5f5f5;padding:1rem;white-space:pre-wrap;}
+    </style>
 </head>
 <body>
+<h1>Работаем с котами 🐱</h1>
 
-<h1>Manage Cats (CatDto)</h1>
-<a href="index.html">← Back to Main Page</a>
-<hr/>
+<a href="owners.html">⤴ Перейти к владельцам</a>
 
-<!-- 1) Загрузить всех котов -->
-<h2>All Cats</h2>
-<button id="btnLoadAllCats">Load All Cats</button>
-<div id="catList"></div>
+<fieldset>
+    <legend>Создать кота (POST /​cats)</legend>
+    <label>JSON тела запроса:<br>
+        <textarea id="catJson" rows="5" cols="60">
+{
+  "name":"Барсик",
+  "color":"BLACK",
+  "breed":"MAINE_COON",
+  "birthDate":"2020-05-19"
+}
+        </textarea>
+    </label><br>
+    <button onclick="createCat()">Создать</button>
+</fieldset>
 
-<!-- 2) Создать кота -->
-<h2>Create New Cat</h2>
-<form id="catCreateForm">
-    Name: <input type="text" id="catName" required><br/>
-    Birth Date (yyyy-MM-dd): <input type="text" id="catBirthDate" required><br/>
-    Breed: <input type="text" id="catBreed" required><br/>
-    Color Name: <input type="text" id="catColorName" required><br/>
-    <button type="submit">Create Cat</button>
-</form>
+<fieldset>
+    <legend>Получить кота по ID (GET /​cats/{id})</legend>
+    <input id="getCatId" type="number" placeholder="ID">
+    <button onclick="getCat()">Получить</button>
+</fieldset>
 
-<!-- 3) Удалить кота по ID -->
-<h2>Delete Cat by ID</h2>
-<form id="catDeleteForm">
-    <input type="number" id="catIdToDelete" placeholder="Cat ID" required>
-    <button type="submit">Delete</button>
-</form>
+<fieldset>
+    <legend>Список котов (GET /​cats/getAll)</legend>
+    <label>offset <input id="offset" type="number" value="0" style="width:4rem"></label>
+    <label>limit  <input id="limit"  type="number" value="20" style="width:4rem"></label>
+    <button onclick="getAllCats()">Показать</button>
+</fieldset>
 
-<!-- 4) Получить кота по ID -->
-<h2>Get Cat by ID</h2>
-<form id="catGetForm">
-    <input type="number" id="catIdGet" placeholder="Cat ID" required>
-    <button type="submit">Get Cat</button>
-</form>
-<div id="singleCat"></div>
+<fieldset>
+    <legend>Удаление</legend>
+    <label>Удалить кота по ID (DELETE /​cats/{id}) 
+        <input id="delCatId" type="number" placeholder="ID">
+        <button onclick="deleteCat()">Удалить</button>
+    </label><br>
+    <button onclick="deleteAllCats()" style="margin-top:0.75rem">Удалить ВСЕХ (DELETE /​cats)</button>
+</fieldset>
 
-<!-- 5) Добавить друга -->
-<h2>Add Friend</h2>
-<form id="addFriendForm">
-    Cat ID: <input type="number" id="catIdFriend" required><br/>
-    Friend Cat ID: <input type="number" id="friendId" required><br/>
-    <button type="submit">Add Friend</button>
-</form>
-<!-- 6) Удалить всех котов -->
-<h2>Delete All Cats</h2>
-<button id="btnDeleteAllCats">Delete All</button>
+<fieldset>
+    <legend>Добавить друга (POST /​cats/{catId}/friends/{friendId})</legend>
+    <input id="catId"     type="number" placeholder="catId">
+    <input id="friendId"  type="number" placeholder="friendId">
+    <button onclick="addFriend()">Добавить</button>
+</fieldset>
 
-<!-- 7) Получить друзей кота -->
-<h2>Get All Friends of Cat</h2>
-<form id="catFriendsForm">
-    <input type="number" id="catIdFriends" placeholder="Cat ID" required>
-    <button type="submit">Get Friends</button>
-</form>
-<div id="friendsList"></div>
+<fieldset>
+    <legend>Обновить кота (PUT /​cats/{id})</legend>
+    <input id="updCatId" type="number" placeholder="ID"><br>
+    <textarea id="updCatJson" rows="4" cols="60">
+{
+  "name":"Барсик‑старший",
+  "color":"WHITE"
+}
+    </textarea><br>
+    <button onclick="updateCat()">Обновить</button>
+</fieldset>
 
-<!-- 8) Получить всех котов по ownerId -->
-<h2>Get All Cats by Owner ID</h2>
-<form id="ownerCatsForm">
-    <input type="number" id="ownerIdCats" placeholder="Owner ID" required>
-    <button type="submit">Get Owner's Cats</button>
-</form>
-<div id="ownerCatsList"></div>
-
-<h2>Filter & Paginate Cats</h2>
-<form id="catFilterForm">
-    <!-- Поля фильтра (как в CatFilter): -->
-    Name Contains: <input type="text" id="catNameFilter" /><br/>
-    Breed: <input type="text" id="catBreedFilter" /><br/>
-
-    <!-- Пагинация: offset, limit -->
-    Offset: <input type="number" id="catOffset" value="0" />
-    Limit: <input type="number" id="catLimit" value="20" />
-    <br/>
-    <button type="submit">Load Cats</button>
-</form>
+<h2>Ответ сервера</h2>
+<pre id="out"> </pre>
 
 <script>
-    // === 1) LOAD ALL CATS ===
-    document.getElementById("btnLoadAllCats").addEventListener("click", () => {
-        fetch("/cats/getAll")  // GET /cats/getAll
-            .then(res => res.json())
-            .then(catArray => {
-                const catListDiv = document.getElementById("catList");
-                catListDiv.innerHTML = ""; // clear
-                const ul = document.createElement("ul");
-                catArray.forEach(cat => {
-                    const li = document.createElement("li");
-                    li.innerText = `ID=${cat.id}, name=${cat.name}, breed=${cat.breed}, color=${cat.color}, birthDate=${cat.birthDate}`;
-                    ul.appendChild(li);
-                });
-                catListDiv.appendChild(ul);
-            })
-            .catch(err => console.error("Error loading cats:", err));
-    });
+    const out = document.getElementById('out');
 
-    // === 2) CREATE NEW CAT ===
-    document.getElementById("catCreateForm").addEventListener("submit", e => {
-        e.preventDefault();
-        const name = document.getElementById("catName").value;
-        const birthDate = document.getElementById("catBirthDate").value; // "yyyy-MM-dd"
-        const breed = document.getElementById("catBreed").value;
-        const colorName = document.getElementById("catColorName").value;
+    function show(r){out.textContent=typeof r==='string'?r:JSON.stringify(r,null,2);}
 
-        // Учитывая CatDto(... ColorsDto color), создадим объект color
-
-        // Тело запроса (CatDto): { name, birthDate, breed, color:{ colorName: ... } }
-        const catDto = {
-            name: name,
-            birthDate: birthDate, // строка, server parses
-            breed: breed,
-            color: colorName
-        };
-
-        fetch("/cats", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(catDto)
-        })
-            .then(res => {
-                if(!res.ok) throw new Error("Failed to create cat");
-                return res.json();
-            })
-            .then(createdCat => {
-                alert("Cat created! ID=" + createdCat.id);
-            })
-            .catch(err => console.error("Error creating cat:", err));
-    });
-
-    // === 3) DELETE CAT BY ID ===
-    document.getElementById("catDeleteForm").addEventListener("submit", e => {
-        e.preventDefault();
-        const catId = document.getElementById("catIdToDelete").value;
-
-        fetch("/cats/" + catId, { method: "DELETE" })
-            .then(res => {
-                if(!res.ok) throw new Error("Delete failed. Possibly cat not found?");
-                alert("Cat deleted ID=" + catId);
-            })
-            .catch(err => console.error("Error deleting cat:", err));
-    });
-
-    // === 4) GET CAT BY ID ===
-    document.getElementById("catGetForm").addEventListener("submit", e => {
-        e.preventDefault();
-        const catId = document.getElementById("catIdGet").value;
-
-        fetch("/cats/" + catId)
-            .then(res => {
-                if(!res.ok) throw new Error("Cat not found or error");
-                return res.json();
-            })
-            .then(cat => {
-                const singleCatDiv = document.getElementById("singleCat");
-                singleCatDiv.innerHTML = `Cat ID=${cat.id}, name=${cat.name}, breed=${cat.breed}, birthDate=${cat.birthDate}, color=${cat.color}`;
-            })
-            .catch(err => console.error("Error fetching cat:", err));
-    });
-
-    // === 5) ADD FRIEND (catId, friendId) ===
-    document.getElementById("addFriendForm").addEventListener("submit", e => {
-        e.preventDefault();
-        const catId = document.getElementById("catIdFriend").value;
-        const friendId = document.getElementById("friendId").value;
-
-        fetch(`/cats/${catId}/friends/${friendId}`, { method: "POST" })
-            .then(res => {
-                if(!res.ok) throw new Error("Failed to add friend");
-                alert(`Friend ID=${friendId} added to Cat ID=${catId}`);
-            })
-            .catch(err => console.error("Error adding friend:", err));
-    });
-    // === 6) DELETE ALL CATS ===
-    document.getElementById("btnDeleteAllCats").addEventListener("click", () => {
-        if (confirm("Are you sure you want to delete ALL cats?")) {
-            fetch("/cats", { method: "DELETE" })
-                .then(res => {
-                    if (!res.ok) throw new Error("Delete all failed");
-                    alert("All cats deleted");
-                })
-                .catch(err => console.error("Error deleting all cats:", err));
-        }
-    });
-
-    // === 7) GET FRIENDS OF A CAT ===
-    document.getElementById("catFriendsForm").addEventListener("submit", e => {
-        e.preventDefault();
-        const catId = document.getElementById("catIdFriends").value;
-
-        fetch(`/cats/${catId}/friends`)
-            .then(res => res.json())
-            .then(friends => {
-                const div = document.getElementById("friendsList");
-                div.innerHTML = "<h4>Friends:</h4>";
-                friends.forEach(c => {
-                    div.innerHTML += `ID=${c.id}, name=${c.name}, breed=${c.breed}<br/>`;
-                });
-            })
-            .catch(err => console.error("Error fetching friends:", err));
-    });
-
-    // === 8) GET ALL CATS BY OWNER ID ===
-    document.getElementById("ownerCatsForm").addEventListener("submit", e => {
-        e.preventDefault();
-        const ownerId = document.getElementById("ownerIdCats").value;
-
-        fetch(`/cats/${ownerId}/all-cats`)
-            .then(res => res.json())
-            .then(cats => {
-                const div = document.getElementById("ownerCatsList");
-                div.innerHTML = "<h4>Owner's Cats:</h4>";
-                cats.forEach(c => {
-                    div.innerHTML += `ID=${c.id}, name=${c.name}, breed=${c.breed}<br/>`;
-                });
-            })
-            .catch(err => console.error("Error fetching owner's cats:", err));
-    });
+    async function createCat(){
+        const body=document.getElementById('catJson').value;
+        const res=await fetch('/cats',{method:'POST',headers:{'Content-Type':'application/json'},body});
+        show(await res.json());
+    }
+    async function getCat(){
+        const id=document.getElementById('getCatId').value;
+        const res=await fetch(`/cats/${id}`);
+        show(await res.json());
+    }
+    async function getAllCats(){
+        const off=document.getElementById('offset').value||0;
+        const lim=document.getElementById('limit').value||20;
+        const res=await fetch(`/cats/getAll?offset=${off}&limit=${lim}`);
+        show(await res.json());
+    }
+    async function deleteCat(){
+        const id=document.getElementById('delCatId').value;
+        const res=await fetch(`/cats/${id}`,{method:'DELETE'});
+        show(res.ok?`Кот ${id} удалён`:'Ошибка');
+    }
+    async function deleteAllCats(){
+        const res=await fetch('/cats',{method:'DELETE'});
+        show(res.ok?'Все коты удалены':'Ошибка');
+    }
+    async function addFriend(){
+        const catId=document.getElementById('catId').value;
+        const friendId=document.getElementById('friendId').value;
+        const res=await fetch(`/cats/${catId}/friends/${friendId}`,{method:'POST'});
+        show(res.ok?'Друг добавлен':'Ошибка');
+    }
+    async function updateCat(){
+        const id=document.getElementById('updCatId').value;
+        const body=document.getElementById('updCatJson').value;
+        const res=await fetch(`/cats/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body});
+        show(await res.json());
+    }
 </script>
-<script>
-    document.getElementById("catFilterForm").addEventListener("submit", event => {
-        event.preventDefault();
-
-        // Собираем параметры из формы
-        const name = document.getElementById("catNameFilter").value;
-        const breed = document.getElementById("catBreedFilter").value;
-        const offset = document.getElementById("catOffset").value;
-        const limit = document.getElementById("catLimit").value;
-
-        // Собираем query-string
-        // В @ModelAttribute CatFilter у вас поля, например, nameContains, breed
-        // Так что параметры должны совпадать с названиями: ?nameContains=..., &breed=...
-        let qs = `offset=${offset}&limit=${limit}`;
-        if (name) {
-            qs += `&nameContains=${encodeURIComponent(name)}`;
-        }
-        if (breed) {
-            qs += `&breed=${encodeURIComponent(breed)}`;
-        }
-
-        // GET /cats/getAll?offset=...&limit=...&nameContains=...&breed=...
-        fetch(`/cats/getAll?${qs}`)
-            .then(res => res.json())
-            .then(cats => {
-                const div = document.getElementById("filteredCats");
-                div.innerHTML = "<h4>Filtered Cats:</h4>";
-                cats.forEach(cat => {
-                    div.innerHTML += `ID=${cat.id}, name=${cat.name}, breed=${cat.breed}<br/>`;
-                });
-            })
-            .catch(err => console.error("Error filtering cats:", err));
-    });
-</script>
-
 </body>
 </html>

@@ -1,7 +1,6 @@
 package ru.kozlov.services;
 
 import org.springframework.data.domain.Pageable;
-import ru.kozlov.models.CatOwner;
 import ru.kozlov.models.CatOwnerDto;
 import ru.kozlov.models.OwnerFilter;
 
@@ -21,4 +20,6 @@ public interface CatOwnerService {
     List<CatOwnerDto> getAll(OwnerFilter filter, Pageable pageable);
 
     void addCat(Long id, Long catId);
+
+    boolean isOwner(Long ownerId, String username);
 }

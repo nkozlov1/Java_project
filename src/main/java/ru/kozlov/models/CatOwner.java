@@ -22,6 +22,10 @@ public class CatOwner {
     @OneToMany(mappedBy = "owner")
     private List<Cat> pets = new ArrayList<>();
 
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "user_id", referencedColumnName = "id")
+    private User user;
+
     public CatOwner(Long id, String name, LocalDate birthDate) {
         this.id = id;
         this.name = name;

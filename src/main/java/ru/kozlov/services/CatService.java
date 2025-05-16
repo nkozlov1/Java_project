@@ -2,8 +2,6 @@ package ru.kozlov.services;
 
 
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
-import ru.kozlov.models.Cat;
 import ru.kozlov.models.CatDto;
 import ru.kozlov.models.CatFilter;
 
@@ -27,4 +25,7 @@ public interface CatService {
     List<CatDto> getAllCatsById(Long id);
 
     void addFriend(Long catId, Long friendId);
+
+    boolean isCatOwner(Long catId, String username);
 }
+

@@ -3,20 +3,20 @@ package ru.kozlov.services;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import ru.kozlov.exceptions.CatNotFoundException;
-import ru.kozlov.mappers.ColorsDtoMapper;
-import ru.kozlov.models.CatDto;
-import ru.kozlov.models.Cat;
 import ru.kozlov.mappers.CatDtoMapper;
+import ru.kozlov.mappers.ColorsDtoMapper;
+import ru.kozlov.models.Cat;
+import ru.kozlov.models.User;
+import ru.kozlov.models.CatDto;
 import ru.kozlov.models.CatFilter;
 import ru.kozlov.repositories.CatRepository;
 
 import java.util.List;
 import java.util.Set;
 
-@Service
+@Service("catService")
 public class CatServiceImpl implements CatService {
     private final CatRepository catRepository;
 
@@ -91,11 +91,24 @@ public class CatServiceImpl implements CatService {
     public CatDto update(Long id, CatDto catDto) {
         Cat cat = catRepository.findById(id)
                 .orElseThrow(() -> new CatNotFoundException(id));
-        cat.setName(catDto.getName());
-        cat.setColor(ColorsDtoMapper.toDao(catDto.getColor()));
-        cat.setBirthDate(catDto.getBirthDate());
-        cat.setBreed(catDto.getBreed());
+        if (catDto.getName() != null)
+            cat.setName(catDto.getName());
+        if (catDto.getColor() != null)
+            cat.setColor(ColorsDtoMapper.toDao(catDto.getColor()));
+        if (catDto.getBirthDate() != null)
+            cat.setBirthDate(catDto.getBirthDate());
+        if (catDto.getBreed() != null)
+            cat.setBreed(catDto.getBreed());
         Cat updated = catRepository.save(cat);
         return CatDtoMapper.toDto(updated);
+    }
+
+    public boolean isCatOwner(Long catId, String username) {
+        Cat cat = catRepository.findById(catId).orElse(null);
+        if (cat == null || cat.getOwner() == null) {
+            return false;
+        }
+        User user = cat.getOwner().getUser();
+        return user != null && user.getUsername().equals(username);
     }
 }
